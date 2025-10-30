@@ -282,6 +282,7 @@ class Plotter(object):
         ax.set_xlabel('misfit norm')
         ax.set_ylabel('model norm')
         ax.legend(fontsize=12)
+        ax.plot(self.regOpt.rnorm_fit, self.regOpt.mnorm_fit)
     
     def plot_lambda_relation(self, ax):
         y, x = np.meshgrid(self.regOpt.l2s, self.regOpt.l1s)

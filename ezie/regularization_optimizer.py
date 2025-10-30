@@ -133,13 +133,15 @@ class RegularizationOptimizer(object):
     @property
     def opt_id(self):
         if self._opt_id is None:
-            self._opt_id, self._offset = self.robust_Kneedle()
+            #self._opt_id, self._offset = self.robust_Kneedle()
+            self._opt_id, self._offset = self.max_curvature()
         return self._opt_id
 
     @property
     def offset(self):
         if self._offset is None:
-            self._opt_id, self._offset = self.robust_Kneedle()
+            #self._opt_id, self._offset = self.robust_Kneedle()
+            self._opt_id, self._offset = self.max_curvature()
         return self._offset
     
     @property
@@ -171,6 +173,48 @@ class RegularizationOptimizer(object):
             self._mnorm[i] = np.log10(self.model.m.T.dot(self.model.m) + self.model.m.T.dot(self.model.LTL).dot(self.model.m))
 
         self.model.reset_regularization(l1_store, l2_store)
+
+    def max_curvature(self):
+        # Create the spline
+        spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
+        rnorm_fit = np.linspace(self.rnorm.min(), self.rnorm.max(), 1000)
+        mnorm_fit = spl(rnorm_fit)
+        
+        self.rnorm_fit, self.mnorm_fit = rnorm_fit, mnorm_fit
+        
+        # Get first and second derivatives
+        spl_prime = spl.derivative(1)  # First derivative
+        spl_double_prime = spl.derivative(2)  # Second derivative
+        
+        # Evaluate derivatives at the fitted points
+        y_prime = spl_prime(rnorm_fit)
+        y_double_prime = spl_double_prime(rnorm_fit)
+        
+        # Calculate curvature: κ = |y''| / (1 + y'^2)^(3/2)
+        curvature = np.abs(y_double_prime) / (1 + y_prime**2)**(3/2)
+        
+        # Find convex region (where second derivative is positive)
+        convex_mask = y_double_prime > 0
+        
+        if not np.any(convex_mask):
+            # No convex region found
+            return None, None
+        
+        # Get curvature only in convex region
+        convex_curvature = curvature[convex_mask]
+        convex_rnorm = rnorm_fit[convex_mask]
+        
+        # Find maximum curvature in convex region
+        max_curv_idx = np.argmax(convex_curvature)
+        max_curvature_value = convex_curvature[max_curv_idx]
+        max_curvature_point = convex_rnorm[max_curv_idx]
+        
+        # Get the corresponding y-value
+        #max_curvature_y = spl(max_curvature_point)
+    
+        return np.argmin(abs(self.rnorm - max_curvature_point)), 0
+        #return max_curvature_point, max_curvature_value
+    
 
     def robust_Kneedle(self):
         start = self.find_convex_start_finite_diff()
