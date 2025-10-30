@@ -3,13 +3,13 @@ from typing import Union, Optional
 from .data import Data
 from .regularization_optimizer import RegularizationOptimizer
 from .evaluator import Evaluator
+from .resolution import Resolution
 from secsy import spherical
-from secsy import get_SECS_B_G_matrices, get_SECS_J_G_matrices
+from secsy import get_SECS_B_G_matrices
 from secsy import CSgrid, CSprojection
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, solve_triangular
 from apexpy import Apex
-import ppigrf
 
 # Constants
 d2r = np.pi / 180
@@ -41,6 +41,7 @@ class Model(object):
         self.reset_design()
         self.reset_solution()
         self.reset_ev()
+        self.reset_resolution()
 
 #%% Data
     
@@ -351,4 +352,14 @@ class Model(object):
         if self._m is None:
             self._m = cho_solve(self.c_factor, self.GTd, check_finite=False)
         return self._m
-    
+
+#%% Resolution
+
+    def reset_resolution(self):
+        self._resolution = None
+
+    @property
+    def resolution(self):
+        if self._resolution is None:
+            self._resolution = Resolution(self)
+        return self._resolution

@@ -6,6 +6,7 @@ from .mem import MEM
 from .regularization_optimizer import RegularizationOptimizer
 from .visualization import Plotter
 from .evaluator import Evaluator
+from .resolution import Resolution
 
 __all__ = [
     "Model",
@@ -13,6 +14,7 @@ __all__ = [
     "MEM",
     "RegularizationOptimizer",
     "Plotter",
-    "Evaluator"
+    "Evaluator",
+    "Resolution"
 ]
 
