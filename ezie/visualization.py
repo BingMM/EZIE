@@ -286,8 +286,9 @@ class Plotter(object):
     
     def plot_lambda_relation(self, ax):
         y, x = np.meshgrid(self.regOpt.l2s, self.regOpt.l1s)
-        ax.tricontourf(x.flatten(), y.flatten(), 
-                       self.regOpt.gini_map.flatten(), 
+        gini = np.copy(self.regOpt.gini_map)
+        gini /= np.max(gini, axis=1, keepdims=True)
+        ax.tricontourf(x.flatten(), y.flatten(), gini.flatten(), 
                        levels=40, cmap='magma')
         ax.plot(self.regOpt.l1s, self.regOpt.l2_ridge, 
                 '.--', color='tab:blue', linewidth=1, zorder=10,

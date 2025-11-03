@@ -35,11 +35,11 @@ def calc_gini_matrix(x):
 class RegularizationOptimizer(object):
     def __init__(self, 
                  model,
-                 l1_lower: Optional[int] = -4, 
-                 l1_upper: Optional[int] =  4, 
+                 l1_lower: Optional[int] = -3, 
+                 l1_upper: Optional[int] =  3, 
                  l1_steps: Optional[int] = 10,
                  l2_lower: Optional[int] = -2, 
-                 l2_upper: Optional[int] =  4, 
+                 l2_upper: Optional[int] =  6, 
                  l2_steps: Optional[int] = 10,
                  iterations: Optional[int] = 2,
                  fit_steps: Optional[int] = 50,
@@ -108,9 +108,13 @@ class RegularizationOptimizer(object):
 
     def automate_m_id(self):
         xis = [np.nanmedian(self.model.grid.projection.geo2cube(MEM.lon, MEM.lat)[0]) for MEM in self.model.data.mems]
-        dists = np.vstack([self.model.grid.xi[0, :] - xi for xi in xis])
+        xi = self.model.grid.xi[0, :]
+        xi_min, xi_max = np.min(xis), np.max(xis)
+        left_id, right_id = np.argmin(abs(xi-xi_min)), np.argmin(abs(xi-xi_max))
+        xi_crop = xi[left_id:right_id+1]
+        dists = np.vstack([xi_crop - xi for xi in xis])
         xi_id = np.argmax(np.min(abs(dists), axis=0))
-        return self.model.grid.shape[0]//2*self.model.grid.shape[1] + xi_id
+        return self.model.grid.shape[0]//2*self.model.grid.shape[1] + (left_id + xi_id)
 
 #%% L-curve
    

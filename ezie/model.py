@@ -121,10 +121,10 @@ class Model(object):
                    map_params:Optional[dict] = None,
                    center_mem: Optional[int] = 0):
 
-        self.map_params = {'LRES': 40e3,
-                           'WRES': 20e3,
-                           'W': 2000e3,
-                           'L': 1500e3,#700e3,
+        self.map_params = {'LRES': 20e3,
+                           'WRES': 40e3,
+                           'W': 2400e3,
+                           'L': 2000e3,#700e3,
                            'RE': 6371.2e3,
                            'HI': 110e3}
         
@@ -337,8 +337,9 @@ class Model(object):
     @property
     def Cmpost(self):
         if self._Cmpost is None:
-            inv_L = solve_triangular(self.c_factor[0], np.eye(self.c_factor[0].shape[0]), lower=self.c_factor[1])
-            self._Cmpost = inv_L.T @ inv_L
+            #inv_L = solve_triangular(self.c_factor[0], np.eye(self.c_factor[0].shape[0]), lower=self.c_factor[1])
+            #self._Cmpost = inv_L.T @ inv_L
+            self._Cmpost = cho_solve(self.c_factor, np.eye(self.GTG.shape[0]), check_finite=False)
         return self._Cmpost
     
     @property
