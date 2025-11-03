@@ -180,7 +180,8 @@ class RegularizationOptimizer(object):
 
     def max_curvature(self):
         # Create the spline
-        spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
+        #spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
+        spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=1e-2)
         rnorm_fit = np.linspace(self.rnorm.min(), self.rnorm.max(), 1000)
         mnorm_fit = spl(rnorm_fit)
         
