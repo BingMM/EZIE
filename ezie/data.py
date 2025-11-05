@@ -5,7 +5,7 @@ from .mem import MEM
 
 class Data(object):
     def __init__(self, 
-                 date: datetime, 
+                 date: Union[datetime, list[datetime]], 
                  lat: list, 
                  lon: list, 
                  r: Union[list, float, int], 
@@ -21,7 +21,11 @@ class Data(object):
                  cov_nu: Optional[list] = None,
                  cov_mag: Optional[list] = None):
         
-        self.date = date
+        if isinstance(date, list):
+            self.dates = date
+            self.date = self.dates[len(self.dates)//2]
+        else:
+            self.date = date
         self.nmem = len(lat)
         
         if not isinstance(r, list):

@@ -7,6 +7,7 @@ from .regularization_optimizer import RegularizationOptimizer
 from .visualization import Plotter
 from .evaluator import Evaluator
 from .resolution import Resolution
+from .validation import Validation
 
 __all__ = [
     "Model",
@@ -15,6 +16,7 @@ __all__ = [
     "RegularizationOptimizer",
     "Plotter",
     "Evaluator",
-    "Resolution"
+    "Resolution",
+    "Validation"
 ]
 

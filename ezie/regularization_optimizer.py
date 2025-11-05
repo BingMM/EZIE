@@ -181,7 +181,8 @@ class RegularizationOptimizer(object):
     def max_curvature(self):
         # Create the spline
         #spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
-        spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=1e-2)
+        #spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=1e-2)
+        spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
         rnorm_fit = np.linspace(self.rnorm.min(), self.rnorm.max(), 1000)
         mnorm_fit = spl(rnorm_fit)
         
@@ -200,6 +201,8 @@ class RegularizationOptimizer(object):
         
         # Find convex region (where second derivative is positive)
         convex_mask = y_double_prime > 0
+        stable_spline_mask = rnorm_fit >= self.rnorm[4]
+        covex_mask = convex_mask & stable_spline_mask
         
         if not np.any(convex_mask):
             # No convex region found
@@ -217,7 +220,7 @@ class RegularizationOptimizer(object):
         # Get the corresponding y-value
         #max_curvature_y = spl(max_curvature_point)
     
-        return np.argmin(abs(self.rnorm - max_curvature_point)), 0
+        return np.argmin(abs(self.rnorm - max_curvature_point)), 3
         #return max_curvature_point, max_curvature_value
     
 

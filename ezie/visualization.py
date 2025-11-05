@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from .model import Model
 from polplot import Polarplot
 from .regularization_optimizer import RegularizationOptimizer
+from .validation import Validation
 
 #%% Functions
 
@@ -30,22 +31,25 @@ def calc_gini_matrix(x):
 
 class Plotter(object):
     def __init__(self, 
-                 model: Optional[Model] = None,
+                 model: Model = None,
                  regOpt: Optional[RegularizationOptimizer] = None,
                  Blvls: Optional[np.ndarray] = np.linspace(-600, 600, 41),
                  Bcmap: Optional[str] = 'bwr',
                  Bucmap: Optional[str] = 'Reds',
                  Bulvls: Optional[np.ndarray] = np.linspace(0, 400, 40),
-                 Jscale: Optional[Union[float, int]] = 1e1):
+                 Jscale: Optional[Union[float, int]] = 1e1,
+                 userid: Optional[str] = None):
         
         
         self.model = model
+        self.userid = userid
         self.Blvls = Blvls
         self.Bulvls = Bulvls
         self.Bcmap = Bcmap
         self.Bucmap = Bucmap
         self.Jscale = Jscale
         self._regOpt = regOpt
+        self._val = None
         
     @property
     def regOpt(self):
@@ -54,8 +58,102 @@ class Plotter(object):
         else:
             return self._regOpt
     
+    @property
+    def val(self):
+        if self._val is None:
+            self._val = Validation(self.model, self.userid)
+        return self._val
+    
 #%%    
     
+    def plot_validation(self):
+        
+        figs, axs_ = [], []
+        for i, IAGA in enumerate(self.val.IAGA):
+            fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharex=True, sharey=True)
+            sm_B, ev_B, ev_B_var = self.val.get_IAGA(IAGA)
+            
+            for j, c in enumerate(['Be', 'Bn', 'Bu']):
+                axs[j].scatter(np.zeros(sm_B[0].size), sm_B[j]*1e9, alpha=.5)
+                axs[j].plot([-.1, .1], [np.median(sm_B[j]*1e9)]*2, color='tab:red', linewidth=2)
+                
+                mean = ev_B[j]*1e9
+                low = mean - ev_B_var[j]*1e9
+                high = mean + ev_B_var[j]*1e9
+                axs[j].plot([.5]*2, [low, high], color='C1')
+                axs[j].plot([.4, .6], [low]*2, color='C1')
+                axs[j].plot([.4, .6], [mean]*2, color='C1', linewidth=2)
+                axs[j].plot([.4, .6], [high]*2, color='C1')
+                
+                axs[j].set_title(c)
+                axs[j].set_xticks([0, .5])
+                axs[j].set_xticklabels(['Supermag', 'EZIE'])
+                axs[j].yaxis.grid()
+            
+            axs[0].set_xlim(-.5, 1)
+            axs[0].set_ylabel('nT')
+            plt.suptitle(IAGA)
+            
+            figs.append(fig)
+            axs_.append(axs)
+        
+        return figs, axs_
+    
+    def plot_validation_map(self):
+        
+        x = self.model.grid.xi.max() - self.model.grid.xi.min()
+        y = self.model.grid.eta.max() - self.model.grid.eta.min()
+        
+        fig = plt.figure(figsize=(10, y/(x) * 10))
+        ax = plt.gca()
+        
+        self.plot_latlon(ax)
+        self.plot_tracks(ax, lw=8)
+        
+        lon, lat, Be_sm, Bn_sm = [], [], [], []
+        Be_sm_avg, Bn_sm_avg, Bu_sm_avg = [], [], []
+        Be_avg, Bn_avg, Bu_avg = [], [], []
+        for IAGA, lo, la in zip(self.val.IAGA, self.val.lon, self.val.lat):
+            sm_B, ev_B, ev_B_var = self.val.get_IAGA(IAGA)
+            Be_sm.append(sm_B[0])
+            Bn_sm.append(sm_B[1])
+            lon.append(np.ones(sm_B[0].size)*lo)
+            lat.append(np.ones(sm_B[0].size)*la)
+            
+            Be_sm_avg.append(np.median(sm_B[0]))
+            Bn_sm_avg.append(np.median(sm_B[1]))
+            Bu_sm_avg.append(np.median(sm_B[2]))
+            
+            Be_avg.append(ev_B[0])
+            Bn_avg.append(ev_B[1])
+            Bu_avg.append(ev_B[2])
+            
+        xi, eta, Bxi, Beta = self.model.grid.projection.vector_cube_projection(np.hstack(Be_sm), np.hstack(Bn_sm), np.hstack(lon), np.hstack(lat))
+        Bscale = 10*np.median(np.sqrt(Bxi**2 + Beta**2))        
+        plt.quiver(xi, eta, Bxi, Beta, scale=Bscale, width=.001, color='k', alpha=.3)
+        
+        xi, eta, Bxi, Beta = self.model.grid.projection.vector_cube_projection(np.array(Be_sm_avg), np.array(Bn_sm_avg), self.val.lon, self.val.lat)
+        plt.quiver(xi, eta, Bxi, Beta, scale=Bscale, width=.005, color='C0')
+        
+        xi, eta, Bxi, Beta = self.model.grid.projection.vector_cube_projection(np.array(Be_avg), np.array(Bn_avg), self.val.lon, self.val.lat)
+        plt.quiver(xi, eta, Bxi, Beta, scale=Bscale, width=.005, color='C1')
+        
+        dBu = (np.array(Bu_avg) - np.array(Bu_sm_avg))*1e9
+        dBumax = np.max(abs(dBu))
+        xi, eta = self.model.grid.projection.geo2cube(self.val.lon, self.val.lat)
+        cc = plt.scatter(xi, eta, 700, dBu, cmap='bwr', marker='*', vmin=-dBumax, vmax=dBumax, edgecolor='k', linewidths=.8)
+        
+        cbar = plt.colorbar(cc, ax=ax, orientation='horizontal',fraction=0.03, pad=0.02)
+        cbar.ax.tick_params(labelsize=20)
+        cbar.set_label('Bu (EZIE) - Bu (SuperMAG) [nT] at 0 km (geocentric)', fontsize=25)
+        
+        ax.set_xticks([])
+        ax.set_yticks([])
+        
+        ax.set_title(self.model.data.date, fontsize=25)
+        
+        return fig, ax
+        
     def plot_solution(self):        
         fig, axs = plt.subplots(3, 2, figsize=(16, 14), layout='constrained')
         paxs = [Polarplot(ax, sector='night') for ax in axs.flatten()]
@@ -236,10 +334,11 @@ class Plotter(object):
         self.plot_tracks(ax)
         return cc
     
-    def plot_tracks(self, ax):
-        for mem in self.model.data.mems:
+    def plot_tracks(self, ax, lw=2):
+        for i, mem in enumerate(self.model.data.mems):
             xi, eta = self.model.grid.projection.geo2cube(mem.lon, mem.lat)
-            ax.plot(xi, eta, linewidth=2)
+            ax.plot(xi, eta, linewidth=lw+1, color='k')
+            ax.plot(xi, eta, linewidth=lw, color=f'C{i}')
     
     def plot_latlon(self, ax):
         for la in range(0, 90, 5):

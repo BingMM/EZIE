@@ -17,3 +17,5 @@ The code is designed to be modular and makes use of lazy loading. It currently i
 - **Plotter**
 
 - **Evaluator**
+
+- **Validation**
