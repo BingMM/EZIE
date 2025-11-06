@@ -64,6 +64,18 @@ class Plotter(object):
             self._val = Validation(self.model, self.userid)
         return self._val
     
+    @property
+    def grid(self):
+        return self.model.grid
+    
+    @property
+    def ev(self):
+        return self.model.ev
+    
+    @property
+    def data(self):
+        return self.model.data
+    
 #%%    
     
     def plot_validation(self):
@@ -101,8 +113,11 @@ class Plotter(object):
     
     def plot_validation_map(self):
         
-        x = self.model.grid.xi.max() - self.model.grid.xi.min()
-        y = self.model.grid.eta.max() - self.model.grid.eta.min()
+        if self.val.IAGA.size == 0:
+            return None, None
+        
+        x = self.grid.xi.max() - self.grid.xi.min()
+        y = self.grid.eta.max() - self.grid.eta.min()
         
         fig = plt.figure(figsize=(10, y/(x) * 10))
         ax = plt.gca()
@@ -128,19 +143,19 @@ class Plotter(object):
             Bn_avg.append(ev_B[1])
             Bu_avg.append(ev_B[2])
             
-        xi, eta, Bxi, Beta = self.model.grid.projection.vector_cube_projection(np.hstack(Be_sm), np.hstack(Bn_sm), np.hstack(lon), np.hstack(lat))
+        xi, eta, Bxi, Beta = self.grid.projection.vector_cube_projection(np.hstack(Be_sm), np.hstack(Bn_sm), np.hstack(lon), np.hstack(lat))
         Bscale = 10*np.median(np.sqrt(Bxi**2 + Beta**2))        
         plt.quiver(xi, eta, Bxi, Beta, scale=Bscale, width=.001, color='k', alpha=.3)
         
-        xi, eta, Bxi, Beta = self.model.grid.projection.vector_cube_projection(np.array(Be_sm_avg), np.array(Bn_sm_avg), self.val.lon, self.val.lat)
+        xi, eta, Bxi, Beta = self.grid.projection.vector_cube_projection(np.array(Be_sm_avg), np.array(Bn_sm_avg), self.val.lon, self.val.lat)
         plt.quiver(xi, eta, Bxi, Beta, scale=Bscale, width=.005, color='C0')
         
-        xi, eta, Bxi, Beta = self.model.grid.projection.vector_cube_projection(np.array(Be_avg), np.array(Bn_avg), self.val.lon, self.val.lat)
+        xi, eta, Bxi, Beta = self.grid.projection.vector_cube_projection(np.array(Be_avg), np.array(Bn_avg), self.val.lon, self.val.lat)
         plt.quiver(xi, eta, Bxi, Beta, scale=Bscale, width=.005, color='C1')
         
         dBu = (np.array(Bu_avg) - np.array(Bu_sm_avg))*1e9
         dBumax = np.max(abs(dBu))
-        xi, eta = self.model.grid.projection.geo2cube(self.val.lon, self.val.lat)
+        xi, eta = self.grid.projection.geo2cube(self.val.lon, self.val.lat)
         cc = plt.scatter(xi, eta, 700, dBu, cmap='bwr', marker='*', vmin=-dBumax, vmax=dBumax, edgecolor='k', linewidths=.8)
         
         cbar = plt.colorbar(cc, ax=ax, orientation='horizontal',fraction=0.03, pad=0.02)
@@ -150,7 +165,7 @@ class Plotter(object):
         ax.set_xticks([])
         ax.set_yticks([])
         
-        ax.set_title(self.model.data.date, fontsize=25)
+        ax.set_title(self.data.date, fontsize=25)
         
         return fig, ax
         
@@ -159,34 +174,34 @@ class Plotter(object):
         paxs = [Polarplot(ax, sector='night') for ax in axs.flatten()]
         
         
-        lat, _, lt, Be, Bn = self.model.ev.geo2qd(self.model.grid.lat_mesh.flatten(), 
-                                               self.model.grid.lon_mesh.flatten(), 
+        lat, _, lt, Be, Bn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
+                                               self.grid.lon_mesh.flatten(), 
                                                80, 
-                                               self.model.ev.Be, self.model.ev.Bn)
+                                               self.ev.Be, self.ev.Bn)
         cc = self.plot_pp(paxs[0], lat, lt, Be*1e9, self.Bcmap, self.Blvls)
         cc = self.plot_pp(paxs[2], lat, lt, Bn*1e9, self.Bcmap, self.Blvls)
-        cc = self.plot_pp(paxs[4], lat, lt, self.model.ev.Bu*1e9, self.Bcmap, self.Blvls)
+        cc = self.plot_pp(paxs[4], lat, lt, self.ev.Bu*1e9, self.Bcmap, self.Blvls)
         
-        lat, _, lt, Be, Bn = self.model.ev.geo2qd(self.model.grid.lat_mesh.flatten(), 
-                                               self.model.grid.lon_mesh.flatten(), 
+        lat, _, lt, Be, Bn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
+                                               self.grid.lon_mesh.flatten(), 
                                                80, 
-                                               self.model.ev.Be_u, self.model.ev.Bn_u)
+                                               self.ev.Be_u, self.ev.Bn_u)
         cc = self.plot_pp(paxs[1], lat, lt, Be*1e9, self.Bucmap, self.Bulvls)
         cc = self.plot_pp(paxs[3], lat, lt, Bn*1e9, self.Bucmap, self.Bulvls)
-        cc = self.plot_pp(paxs[5], lat, lt, self.model.ev.Bu_u*1e9, self.Bucmap, self.Bulvls)
+        cc = self.plot_pp(paxs[5], lat, lt, self.ev.Bu_u*1e9, self.Bucmap, self.Bulvls)
         
         
-        lat, _, lt, Je, Jn = self.model.ev.geo2qd(self.model.grid.lat_mesh.flatten(), 
-                                               self.model.grid.lon_mesh.flatten(), 
+        lat, _, lt, Je, Jn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
+                                               self.grid.lon_mesh.flatten(), 
                                                110, 
-                                               self.model.ev.Je, self.model.ev.Jn)
+                                               self.ev.Je, self.ev.Jn)
         for ax in paxs[::2]:
             self.plot_quiver_pp(ax, lat, lt, Je, Jn, self.Jscale)
         
-        lat, _, lt, Je, Jn = self.model.ev.geo2qd(self.model.grid.lat_mesh.flatten(), 
-                                               self.model.grid.lon_mesh.flatten(), 
+        lat, _, lt, Je, Jn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
+                                               self.grid.lon_mesh.flatten(), 
                                                110, 
-                                               self.model.ev.Je_u, self.model.ev.Jn_u)
+                                               self.ev.Je_u, self.ev.Jn_u)
         for ax in paxs[1::2]:
             self.plot_quiver_pp(ax, lat, lt, Je, np.zeros_like(Je), self.Jscale)
             self.plot_quiver_pp(ax, lat, lt, np.zeros_like(Je), Jn, self.Jscale)
@@ -199,13 +214,13 @@ class Plotter(object):
 
     def plot_solution_cs(self):
         
-        x = self.model.grid.xi.max() - self.model.grid.xi.min()
-        y = self.model.grid.eta.max() - self.model.grid.eta.min()
+        x = self.grid.xi.max() - self.grid.xi.min()
+        y = self.grid.eta.max() - self.grid.eta.min()
         
         fig, axs = plt.subplots(1, 3, figsize=(10, y/(3*x) * 10))
-        cc = self.plot_map(axs[0], self.model.ev.Be*1e9, self.Bcmap, self.Blvls)
-        cc = self.plot_map(axs[1], self.model.ev.Bn*1e9, self.Bcmap, self.Blvls)
-        cc = self.plot_map(axs[2], self.model.ev.Bu*1e9, self.Bcmap, self.Blvls)
+        cc = self.plot_map(axs[0], self.ev.Be*1e9, self.Bcmap, self.Blvls)
+        cc = self.plot_map(axs[1], self.ev.Bn*1e9, self.Bcmap, self.Blvls)
+        cc = self.plot_map(axs[2], self.ev.Bu*1e9, self.Bcmap, self.Blvls)
         
         for ax in axs:
             self.plot_quiver(ax, self.Jscale)
@@ -217,7 +232,7 @@ class Plotter(object):
         axs[0].set_title('Be')
         axs[1].set_title('Bn')
         axs[2].set_title('Bu')
-        axs[1].text(.5, 1.06, self.model.data.date, ha='center', va='center', fontsize=15, transform=axs[1].transAxes)
+        axs[1].text(.5, 1.06, self.data.date, ha='center', va='center', fontsize=15, transform=axs[1].transAxes)
         
         return fig, axs
     
@@ -232,19 +247,19 @@ class Plotter(object):
 
     def plot_data_model_comparison(self):
         
-        nmem = len(self.model.data.mems)
-        ncomp = len(self.model.data.comp)
+        nmem = len(self.data.mems)
+        ncomp = len(self.data.comp)
         #fig, axs = plt.subplots(nmem, ncomp, figsize=(10*(ncomp/nmem), 10), sharex=True, sharey=True)
         fig, axs = plt.subplots(nmem, ncomp, figsize=(10, 10), sharex=True, sharey=True)
         if ncomp == 1:
             axs = axs.reshape(-1, 1)
         
-        for i, mem in enumerate(self.model.data.mems):
-            Be, Bn, Bu, Be_u, Bn_u, Bu_u = self.model.ev.get_B_predictions(lat=mem.lat, lon=mem.lon, r=mem.r, ret=True)
+        for i, mem in enumerate(self.data.mems):
+            Be, Bn, Bu, Be_u, Bn_u, Bu_u = self.ev.get_B_predictions(lat=mem.lat, lon=mem.lon, r=mem.r, ret=True)
             x = mem.lat
-            for j, (ax, c) in enumerate(zip(axs[i], self.model.data.comp)):
+            for j, (ax, c) in enumerate(zip(axs[i], self.data.comp)):
                 if c =='s':
-                    B0, Be0, Bn0, Bu0, _ = self.model.ev.calc_main_field(mem.lat, mem.lon, mem.r, ret=True)                    
+                    B0, Be0, Bn0, Bu0, _ = self.ev.calc_main_field(mem.lat, mem.lon, mem.r, ret=True)                    
                     yd, ydu = mem.B, np.sqrt(mem.cov_mag)
                     yp, ypu = np.sqrt((Be+Be0)**2 + (Bn+Bn0)**2 + (Bu+Bu0)**2) - B0, np.sqrt(Be_u**2 + Bn_u**2 + Bu_u**2)
                 if c =='e':
@@ -282,11 +297,11 @@ class Plotter(object):
         for i, ax in enumerate(axs[-1, :]):
             ax.set_xlabel('lat')
         
-        for i, (ax, c) in enumerate(zip(axs[0, :], self.model.data.comp)):
+        for i, (ax, c) in enumerate(zip(axs[0, :], self.data.comp)):
             ax.text(.5, 1.1, f'B{c}', ha='center', va='center', transform=ax.transAxes)
         
         axs[0, 0].legend()
-        plt.suptitle(self.model.data.date, y=.95)
+        plt.suptitle(self.data.date, y=.95)
         
         return fig, axs
 
@@ -307,26 +322,26 @@ class Plotter(object):
 
     def plot_quiver_pp(self, ax, lat, lt, Je, Jn, scale):
         s = 8
-        ax.quiver(lat.reshape(self.model.grid.xi_mesh.shape)[::s, ::s].flatten(),
-                  lt.reshape(self.model.grid.xi_mesh.shape)[::s, ::s].flatten(),
-                  Jn.reshape(self.model.grid.xi_mesh.shape)[::s, ::s].flatten(),
-                  Je.reshape(self.model.grid.xi_mesh.shape)[::s, ::s].flatten(),
+        ax.quiver(lat.reshape(self.grid.xi_mesh.shape)[::s, ::s].flatten(),
+                  lt.reshape(self.grid.xi_mesh.shape)[::s, ::s].flatten(),
+                  Jn.reshape(self.grid.xi_mesh.shape)[::s, ::s].flatten(),
+                  Je.reshape(self.grid.xi_mesh.shape)[::s, ::s].flatten(),
                   scale=scale, width=.001)
 
     def plot_quiver(self, ax, scale):
         s = 5
-        ax.quiver(self.model.grid.xi_mesh[::s, ::s].flatten(),
-                  self.model.grid.eta_mesh[::s, ::s].flatten(),
-                  self.model.ev.Jxi.reshape(self.model.grid.xi_mesh.shape)[::s, ::s].flatten(),
-                  self.model.ev.Jeta.reshape(self.model.grid.xi_mesh.shape)[::s, ::s].flatten(),
+        ax.quiver(self.grid.xi_mesh[::s, ::s].flatten(),
+                  self.grid.eta_mesh[::s, ::s].flatten(),
+                  self.ev.Jxi.reshape(self.grid.xi_mesh.shape)[::s, ::s].flatten(),
+                  self.ev.Jeta.reshape(self.grid.xi_mesh.shape)[::s, ::s].flatten(),
                   scale=scale, width=.003)
     
     def plot_map(self, ax, var, cmap, lvls):
         ax.set_aspect('equal')
         ax.set_xticks([])
         ax.set_yticks([])
-        cc = ax.tricontourf(self.model.grid.xi_mesh.flatten(),
-                            self.model.grid.eta_mesh.flatten(),
+        cc = ax.tricontourf(self.grid.xi_mesh.flatten(),
+                            self.grid.eta_mesh.flatten(),
                             var.flatten(),
                             cmap = cmap,
                             levels = lvls)
@@ -335,35 +350,35 @@ class Plotter(object):
         return cc
     
     def plot_tracks(self, ax, lw=2):
-        for i, mem in enumerate(self.model.data.mems):
-            xi, eta = self.model.grid.projection.geo2cube(mem.lon, mem.lat)
+        for i, mem in enumerate(self.data.mems):
+            xi, eta = self.grid.projection.geo2cube(mem.lon, mem.lat)
             ax.plot(xi, eta, linewidth=lw+1, color='k')
             ax.plot(xi, eta, linewidth=lw, color=f'C{i}')
     
     def plot_latlon(self, ax):
         for la in range(0, 90, 5):
-            xi, eta = self.model.grid.projection.geo2cube(np.linspace(0, 360, 1000), 
+            xi, eta = self.grid.projection.geo2cube(np.linspace(0, 360, 1000), 
                                                           np.ones(1000)*la)
             ax.plot(xi, eta, linewidth=.5, color='k')
         
         for lo in range(0, 360, 15):
-            xi, eta = self.model.grid.projection.geo2cube(np.ones(1000)*lo,
+            xi, eta = self.grid.projection.geo2cube(np.ones(1000)*lo,
                                                           np.linspace(0, 90, 1000))
             ax.plot(xi, eta, linewidth=.5, color='k')
             
-        ax.set_xlim(self.model.grid.xi_mesh.min(),  self.model.grid.xi_mesh.max())
-        ax.set_ylim(self.model.grid.eta_mesh.min(), self.model.grid.eta_mesh.max())
+        ax.set_xlim(self.grid.xi_mesh.min(),  self.grid.xi_mesh.max())
+        ax.set_ylim(self.grid.eta_mesh.min(), self.grid.eta_mesh.max())
     
     def plot_id(self, ax):
         ax.set_xticks([])
         ax.set_yticks([])
         self.plot_latlon(ax)
         self.plot_tracks(ax)        
-        ax.plot(self.model.grid.xi.flatten()[self.regOpt.m_id],
-                self.model.grid.eta.flatten()[self.regOpt.m_id],
+        ax.plot(self.grid.xi.flatten()[self.regOpt.m_id],
+                self.grid.eta.flatten()[self.regOpt.m_id],
                 '*', color='k', markersize=12)
-        ax.plot(self.model.grid.xi.flatten()[self.regOpt.m_id],
-                self.model.grid.eta.flatten()[self.regOpt.m_id],
+        ax.plot(self.grid.xi.flatten()[self.regOpt.m_id],
+                self.grid.eta.flatten()[self.regOpt.m_id],
                 '*', color='tab:red', markersize=10, label='Optimization zone')
         ax.legend(fontsize=12)
     

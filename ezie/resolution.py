@@ -21,9 +21,6 @@ class Resolution(object):
         else:
             self.R = model.Rm
             self.grid = model.grid
-                    
-        self.shape = self.grid.shape
-        self.n = self.grid.size
         
         if self.R.shape[0] != self.R.shape[1]:
             raise ValueError('R has to be square.')
@@ -32,6 +29,14 @@ class Resolution(object):
             raise ValueError('R and grid does not have the same dimensions.')
         
         self.reset()
+
+    @property
+    def shape(self):
+        return self.grid.shape
+    
+    @property
+    def n(self):
+        return self.grid.size
 
 #%% Reset
 

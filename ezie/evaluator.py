@@ -28,6 +28,14 @@ class Evaluator(object):
         
         self.model = model
 
+    @property
+    def grid(self):
+        return self.model.grid
+    
+    @property
+    def data(self):
+        return self.model.data
+
 #%% Main field
 
     def reset_main_field(self):
@@ -44,22 +52,22 @@ class Evaluator(object):
                         ret=False):
         
         if lat is None:
-            lat = self.model.grid.lat.flatten()
+            lat = self.grid.lat.flatten()
         if lon is None:
-            lon = self.model.grid.lon.flatten()
+            lon = self.grid.lon.flatten()
         if r is None:
             r = (6371.2+80)*1e3
         
         if self.model.B0_model == 'igrf':
-            Be0, Bn0, Bu0 = map(np.ravel, ppigrf.igrf(lon, lat, (r - self.model.map_params['RE'])*1e-3, self.model.data.date))
+            Be0, Bn0, Bu0 = map(np.ravel, ppigrf.igrf(lon, lat, (r - self.model.map_params['RE'])*1e-3, self.data.date))
         elif self.model.B0_model == 'chaos':
             
             if not isinstance(r, np.ndarray):
                 r = np.ones_like(lat)*r
             
-            time = cp.data_utils.mjd2000(self.model.data.date.year, 
-                                         self.model.data.date.month, 
-                                         self.model.data.date.day)  # modified Julian date
+            time = cp.data_utils.mjd2000(self.data.date.year, 
+                                         self.data.date.month, 
+                                         self.data.date.day)  # modified Julian date
             
             chaos_model = cp.load_CHAOS_matfile('/home/bing/Dropbox/work/code/repos/EZIE/data/CHAOS-8.4.mat')
             B_radius, B_theta, B_phi = chaos_model.synth_values_tdep(time, r*1e-3, 90-lat, lon)
@@ -170,14 +178,14 @@ class Evaluator(object):
                           r: Optional[float] = None,
                           ret=False):
         if lat is None:
-            lat = self.model.grid.lat_mesh.flatten()
+            lat = self.grid.lat_mesh.flatten()
         if lon is None:
-            lon = self.model.grid.lon_mesh.flatten()
+            lon = self.grid.lon_mesh.flatten()
         if r is None:
             r = (6371.2+80)*1e3
         
         Ge, Gn, Gu = get_SECS_B_G_matrices(lat, lon, r, 
-                                           self.model.grid.lat.flatten(), self.model.grid.lon.flatten(), RI=self.model.grid.R,
+                                           self.grid.lat.flatten(), self.grid.lon.flatten(), RI=self.grid.R,
                                            singularity_limit=self.model.slim)
         
         Be, Bn, Bu = Ge.dot(self.model.m), Gn.dot(self.model.m), Gu.dot(self.model.m)
@@ -219,12 +227,12 @@ class Evaluator(object):
                           lat: Optional[np.ndarray] = None,
                           lon: Optional[np.ndarray] = None):
         if lat is None:
-            lat = self.model.grid.lat_mesh.flatten()
+            lat = self.grid.lat_mesh.flatten()
         if lon is None:
-            lon = self.model.grid.lon_mesh.flatten()
+            lon = self.grid.lon_mesh.flatten()
 
         Ge, Gn = get_SECS_J_G_matrices(lat, lon, 
-                                       self.model.grid.lat.flatten(), self.model.grid.lon.flatten(), RI=self.model.grid.R,
+                                       self.grid.lat.flatten(), self.grid.lon.flatten(), RI=self.grid.R,
                                        singularity_limit=self.model.slim)
         self._Je = Ge.dot(self.model.m)
         self._Jn = Gn.dot(self.model.m)
@@ -257,16 +265,16 @@ class Evaluator(object):
         return self._Jeta_u
 
     def get_J_cs(self):
-        Jxi, Jeta = self.model.grid.projection.vector_cube_projection(self.Je, self.Jn, 
-                                                                self.model.grid.lon_mesh.flatten(), 
-                                                                self.model.grid.lat_mesh.flatten(),
+        Jxi, Jeta = self.grid.projection.vector_cube_projection(self.Je, self.Jn, 
+                                                                self.grid.lon_mesh.flatten(), 
+                                                                self.grid.lat_mesh.flatten(),
                                                                 return_xi_eta=False)
         self._Jxi = Jxi
         self._Jeta = Jeta
         
-        Jxi_u, Jeta_u = self.model.grid.projection.vector_cube_projection(self.Je_u, self.Jn_u, 
-                                                                self.model.grid.lon_mesh.flatten(), 
-                                                                self.model.grid.lat_mesh.flatten(),
+        Jxi_u, Jeta_u = self.grid.projection.vector_cube_projection(self.Je_u, self.Jn_u, 
+                                                                self.grid.lon_mesh.flatten(), 
+                                                                self.grid.lat_mesh.flatten(),
                                                                 return_xi_eta=False)
         self._Jxi_u = Jxi_u
         self._Jeta_u = Jeta_u
@@ -280,7 +288,7 @@ class Evaluator(object):
 
     def coords_geo2qd(self, lat, lon, h):
         mlat, mlon = self.model.apx.geo2qd(lat, lon, h)
-        mlt = self.model.apx.mlon2mlt(mlon, self.model.data.date)
+        mlt = self.model.apx.mlon2mlt(mlon, self.data.date)
         return mlat, mlon, mlt
     
     def vec_geo2qd(self, lat, lon, h, xe, xn):

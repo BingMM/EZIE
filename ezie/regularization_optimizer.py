@@ -60,6 +60,14 @@ class RegularizationOptimizer(object):
         # --- Everything else
         self.set_model(model)
 
+    @property
+    def grid(self):
+        return self.model.grid
+    
+    @property
+    def data(self):
+        return self.model.data
+
 #%% Reset
 
     def set_model(self, model):
@@ -107,14 +115,14 @@ class RegularizationOptimizer(object):
         return self._m_id
 
     def automate_m_id(self):
-        xis = [np.nanmedian(self.model.grid.projection.geo2cube(MEM.lon, MEM.lat)[0]) for MEM in self.model.data.mems]
-        xi = self.model.grid.xi[0, :]
+        xis = [np.nanmedian(self.grid.projection.geo2cube(MEM.lon, MEM.lat)[0]) for MEM in self.grid.mems]
+        xi = self.grid.xi[0, :]
         xi_min, xi_max = np.min(xis), np.max(xis)
         left_id, right_id = np.argmin(abs(xi-xi_min)), np.argmin(abs(xi-xi_max))
         xi_crop = xi[left_id:right_id+1]
         dists = np.vstack([xi_crop - xi for xi in xis])
         xi_id = np.argmax(np.min(abs(dists), axis=0))
-        return self.model.grid.shape[0]//2*self.model.grid.shape[1] + (left_id + xi_id)
+        return self.grid.shape[0]//2*self.grid.shape[1] + (left_id + xi_id)
 
 #%% L-curve
    
@@ -180,8 +188,6 @@ class RegularizationOptimizer(object):
 
     def max_curvature(self):
         # Create the spline
-        #spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
-        #spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=1e-2)
         spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
         rnorm_fit = np.linspace(self.rnorm.min(), self.rnorm.max(), 1000)
         mnorm_fit = spl(rnorm_fit)
@@ -303,7 +309,7 @@ class RegularizationOptimizer(object):
         if idx is None:                
             R = cho_solve(self.model.c_factor, self.model.GTG, check_finite=False)
         else:
-            e_idx = np.zeros(self.model.grid.size)
+            e_idx = np.zeros(self.grid.size)
             e_idx[idx] = 1.0
             R = cho_solve(self.model.c_factor, e_idx, check_finite=False) @ self.model.GTG
         
@@ -326,7 +332,7 @@ class RegularizationOptimizer(object):
         return self._gini_cube
     
     def get_gini_cube(self):        
-        self._gini_cube = np.zeros((self.l1_steps, self.l2_steps, self.model.grid.size))
+        self._gini_cube = np.zeros((self.l1_steps, self.l2_steps, self.grid.size))
         loop = tqdm(product(enumerate(self.l1s), enumerate(self.l2s)), 
                     total=self.l1_steps*self.l2_steps,
                     desc='Generating gini cube')
