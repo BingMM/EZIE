@@ -2,18 +2,23 @@
 
 Last reviewed: 2026-10-21
 
-Branch reviewed: `main`
+Branch reviewed: `flight-data`
 
-Baseline commit reviewed: `6e4a22874d03ab062904ca4ccd5c4721c4d16866`
+Release commit reviewed: `9508bf9595b4a2ad70b0a9fc3e75d9176c8ad59f`
 
 ## Verified repository state
 
 - **Confirmed by the user:** this is the most modern open-source EZIE data
   codebase, designed before launch to ingest Level-2 data and produce Level-3
   equivalent-current estimates.
-- **Confirmed:** `main` matched `origin/main` at `6e4a228` before the
-  documentation migration. This checkpoint adds root instructions and the
-  standard vault without changing scientific code.
+- **Confirmed:** `v0.1.0-prelaunch` points to documentation-only commit
+  `9508bf9`. Relative to the prior scientific-code commit `6e4a228`, it adds
+  root instructions and the standard vault without changing scientific or
+  package files.
+- **Confirmed:** `main`, `v0.1.0-prelaunch`, and the starting point of
+  `flight-data` have been pushed to `origin`. The hosted GitHub Release remains
+  pending because this environment does not yet have authenticated GitHub API
+  access.
 - **Confirmed:** the package exposes `Model`, `Data`, `MEM`,
   `RegularizationOptimizer`, `Plotter`, `Evaluator`, `Resolution`, and
   `Validation` through `ezie.__init__`.
@@ -61,7 +66,6 @@ have not been reproduced against the current checkout and remain hypotheses.
 ## Current project status
 
 Portfolio status and priority are unknown. The user has registered the project
-and confirmed that the cleaned pre-launch snapshot should be published as an
-archival pre-release, followed by a separate `flight-data` branch for adapting
-the implementation to real flight data. The first representative-data
-validation milestone remains to be specified.
+and confirmed the archival pre-release plus branch strategy. The cleaned tag
+and `flight-data` branch are published; the hosted Release page and first
+representative-data validation milestone remain outstanding.

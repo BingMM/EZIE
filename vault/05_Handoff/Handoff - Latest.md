@@ -2,9 +2,9 @@
 
 Last reviewed: 2026-10-21
 
-Branch: `main`
+Branch: `flight-data`
 
-Baseline commit: `6e4a22874d03ab062904ca4ccd5c4721c4d16866`
+Pre-launch release commit: `9508bf9595b4a2ad70b0a9fc3e75d9176c8ad59f`
 
 ## Summary
 
@@ -13,30 +13,32 @@ technical vault. The useful 2025 Obsidian log and figures were migrated into
 `04_Sessions/`. This was a documentation architecture change only; no package
 logic or scientific result was changed.
 
+Commit `9508bf9` is pushed on `main` and tagged `v0.1.0-prelaunch` on GitHub.
+The `flight-data` branch was created from that commit and is also pushed. A
+hosted GitHub pre-release still needs to be created from the tag; exact release
+notes are recorded in the 2026-10-21 session note.
+
 The package structurally compiles, but it is not reproducible from
 `pyproject.toml`, has no automated tests, and does not import in the current
 environment because `kneed` is missing.
 
 ## Next actionable step
 
-Execute the confirmed baseline and branch strategy:
+Create the hosted GitHub pre-release from `v0.1.0-prelaunch` when authenticated
+GitHub API access is available. Then identify a representative real Level-2
+file and characterize its schema, units, coordinate frames, quality flags,
+covariance, missing-data behavior, and spacecraft/MEM identifiers before
+changing the Level-3 inversion.
 
-1. keep commit `6e4a228` identifiable as the exact pre-launch code baseline;
-2. commit the documentation-only agent/vault migration without changing the
-   scientific code;
-3. create a long-lived `flight-data` branch for real-data adaptation;
-4. make the first milestone ingestion and characterization of a representative
-   real Level-2 file before modifying the Level-3 inversion.
-
-The strategy was confirmed by the user on 2026-10-21. After creating the
-release and branch, establish a reproducible dependency environment and
-minimal regression protection before changing pre-launch scientific
-assumptions.
+Establish a reproducible dependency environment and minimal regression
+protection before changing pre-launch scientific assumptions.
 
 ## Blockers and risks
 
 - Current activity, priority, collaborator commitments, and deadlines are not
   recorded.
+- The Git tag and branch are on GitHub, but the hosted pre-release page is
+  pending an authenticated GitHub connector or API client.
 - Real flight data may differ from the pre-launch examples in schema,
   calibration, quality flags, covariance, geometry, or missing-data behavior;
   these differences have not yet been inventoried.
@@ -60,8 +62,9 @@ assumptions.
 ## Portfolio impact
 
 - Central update needed: No
-- Changes: Record the archival pre-release and `flight-data` branch after they
-  are published.
+- Changes: None outstanding; the central card records the published tag,
+  branch, and pending hosted Release page.
 - Sync summary: EZIE is the most modern open-source L2-to-L3 codebase, but it
-  predates launch. An archival pre-release and separate `flight-data`
-  adaptation branch are confirmed; portfolio priority remains unknown.
+  predates launch. The cleaned pre-launch tag and separate `flight-data`
+  adaptation branch are published; the hosted Release page and project
+  priority remain outstanding.
