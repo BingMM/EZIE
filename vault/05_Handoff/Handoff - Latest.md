@@ -14,9 +14,9 @@ technical vault. The useful 2025 Obsidian log and figures were migrated into
 logic or scientific result was changed.
 
 Commit `9508bf9` is pushed on `main` and tagged `v0.1.0-prelaunch` on GitHub.
-The `flight-data` branch was created from that commit and is also pushed. A
-hosted GitHub pre-release still needs to be created from the tag; exact release
-notes are recorded in the 2026-10-21 session note.
+The `flight-data` branch was created from that commit and is also pushed. The
+hosted GitHub pre-release was published and verified through GitHub's public
+API. Exact release notes are recorded in the 2026-10-21 session note.
 
 The package structurally compiles, but it is not reproducible from
 `pyproject.toml`, has no automated tests, and does not import in the current
@@ -24,11 +24,9 @@ environment because `kneed` is missing.
 
 ## Next actionable step
 
-Create the hosted GitHub pre-release from `v0.1.0-prelaunch` when authenticated
-GitHub API access is available. Then identify a representative real Level-2
-file and characterize its schema, units, coordinate frames, quality flags,
-covariance, missing-data behavior, and spacecraft/MEM identifiers before
-changing the Level-3 inversion.
+Identify a representative real Level-2 file and characterize its schema,
+units, coordinate frames, quality flags, covariance, missing-data behavior,
+and spacecraft/MEM identifiers before changing the Level-3 inversion.
 
 Establish a reproducible dependency environment and minimal regression
 protection before changing pre-launch scientific assumptions.
@@ -37,8 +35,6 @@ protection before changing pre-launch scientific assumptions.
 
 - Current activity, priority, collaborator commitments, and deadlines are not
   recorded.
-- The Git tag and branch are on GitHub, but the hosted pre-release page is
-  pending an authenticated GitHub connector or API client.
 - Real flight data may differ from the pre-launch examples in schema,
   calibration, quality flags, covariance, geometry, or missing-data behavior;
   these differences have not yet been inventoried.
@@ -62,9 +58,9 @@ protection before changing pre-launch scientific assumptions.
 ## Portfolio impact
 
 - Central update needed: No
-- Changes: None outstanding; the central card records the published tag,
-  branch, and pending hosted Release page.
+- Changes: None outstanding; the central card records the published hosted
+  pre-release and branch.
 - Sync summary: EZIE is the most modern open-source L2-to-L3 codebase, but it
-  predates launch. The cleaned pre-launch tag and separate `flight-data`
-  adaptation branch are published; the hosted Release page and project
+  predates launch. The cleaned hosted pre-release and separate `flight-data`
+  adaptation branch are published; the first real-data milestone and project
   priority remain outstanding.

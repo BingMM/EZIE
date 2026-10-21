@@ -14,9 +14,15 @@ README, or license files changed in the release commit.
 
 ## Hosted release status
 
-The GitHub Release page is pending because the local environment has SSH Git
-access but no GitHub CLI, API token, or connected GitHub tool. The tag itself
-is already available on GitHub.
+Published by the user on 2026-10-21:
+
+- URL: `https://github.com/BingMM/EZIE/releases/tag/v0.1.0-prelaunch`
+- GitHub release ID: `419252779`
+- Draft: No
+- Pre-release: Yes
+- Published at: `2026-10-21T07:06:18Z`
+
+The public GitHub API confirmed the intended tag, title, and release body.
 
 ## Release title
 
@@ -51,6 +57,7 @@ Release tag commit, including cleaned documentation and project memory:
 - Remote `main` contains `9508bf9`.
 - Remote tag `v0.1.0-prelaunch` points to `9508bf9`.
 - Remote branch `flight-data` was created from `9508bf9`.
+- The hosted release is public, non-draft, and marked as a pre-release.
 - The release commit was checked to contain documentation/vault changes only.
 - All Python source files parsed successfully.
 - Structural compilation passed before release preparation.

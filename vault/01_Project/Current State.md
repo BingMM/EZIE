@@ -16,9 +16,9 @@ Release commit reviewed: `9508bf9595b4a2ad70b0a9fc3e75d9176c8ad59f`
   root instructions and the standard vault without changing scientific or
   package files.
 - **Confirmed:** `main`, `v0.1.0-prelaunch`, and the starting point of
-  `flight-data` have been pushed to `origin`. The hosted GitHub Release remains
-  pending because this environment does not yet have authenticated GitHub API
-  access.
+  `flight-data` have been pushed to `origin`.
+- **Confirmed:** GitHub Release `v0.1.0-prelaunch` was published on 2026-10-21
+  as a non-draft pre-release with the intended limitations and release notes.
 - **Confirmed:** the package exposes `Model`, `Data`, `MEM`,
   `RegularizationOptimizer`, `Plotter`, `Evaluator`, `Resolution`, and
   `Validation` through `ezie.__init__`.
@@ -67,5 +67,5 @@ have not been reproduced against the current checkout and remain hypotheses.
 
 Portfolio status and priority are unknown. The user has registered the project
 and confirmed the archival pre-release plus branch strategy. The cleaned tag
-and `flight-data` branch are published; the hosted Release page and first
-representative-data validation milestone remain outstanding.
+and hosted pre-release plus the `flight-data` branch are published. The first
+representative-data validation milestone remains outstanding.
