@@ -5,7 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ezie"
 version = "0.1"
-dependencies = []
+dependencies = [
+    "nandir @ git+https://github.com/BingMM/nandir.git@e452b5c6a4f7340143b15ce552ae79447490cee0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

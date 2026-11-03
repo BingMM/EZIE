@@ -19,25 +19,45 @@ class Data(object):
                  cov_en: Optional[list] = None,
                  cov_eu: Optional[list] = None,
                  cov_nu: Optional[list] = None,
-                 cov_mag: Optional[list] = None):
+                 cov_mag: Optional[list] = None,
+                 B0e: Optional[list] = None,
+                 B0n: Optional[list] = None,
+                 B0u: Optional[list] = None,
+                 B0: Optional[list] = None,
+                 background: Optional[str] = None,
+                 scalar_source: Optional[str] = None):
         
         if isinstance(date, list):
             self.dates = date
             self.date = self.dates[len(self.dates)//2]
         else:
+            self.dates = [date]
             self.date = date
+        self.background = background
+        self.scalar_source = scalar_source
         self.nmem = len(lat)
         
-        if not isinstance(r, list):
-            r = [self.nmem]*r
+        if np.isscalar(r):
+            r = [r] * self.nmem
         
-        if np.any([(lst != None) and (len(lst) != self.nmem)  for lst in [lat, lon, r, Be, Bn, Bu, B, cov_ee, cov_nn, cov_uu, cov_en, cov_eu, cov_nu, cov_mag]]):
+        if np.any([(lst != None) and (len(lst) != self.nmem) for lst in
+                   [lat, lon, r, Be, Bn, Bu, B, cov_ee, cov_nn, cov_uu,
+                    cov_en, cov_eu, cov_nu, cov_mag, B0e, B0n, B0u, B0]]):
             raise ValueError('lat, lon, (r), B_i, and cov_i have to be the same length.')
         
         def _safe_iter(x, n):
             return x if x is not None else [None] * n
 
-        self.mems = [MEM(lat_, lon_, r_, Be_, Bn_, Bu_, B_, cov_ee_, cov_nn_, cov_uu_, cov_en_, cov_eu_, cov_nu_, cov_mag_) for (lat_, lon_, r_, Be_, Bn_, Bu_, B_, cov_ee_, cov_nn_, cov_uu_, cov_en_, cov_eu_, cov_nu_, cov_mag_) in zip(lat,lon,r,_safe_iter(Be, self.nmem),_safe_iter(Bn, self.nmem),_safe_iter(Bu, self.nmem),_safe_iter(B, self.nmem),_safe_iter(cov_ee, self.nmem),_safe_iter(cov_nn, self.nmem),_safe_iter(cov_uu, self.nmem),_safe_iter(cov_en, self.nmem),_safe_iter(cov_eu, self.nmem),_safe_iter(cov_nu, self.nmem),_safe_iter(cov_mag, self.nmem),)]
+        values = zip(lat, lon, r,
+                     _safe_iter(Be, self.nmem), _safe_iter(Bn, self.nmem),
+                     _safe_iter(Bu, self.nmem), _safe_iter(B, self.nmem),
+                     _safe_iter(cov_ee, self.nmem), _safe_iter(cov_nn, self.nmem),
+                     _safe_iter(cov_uu, self.nmem), _safe_iter(cov_en, self.nmem),
+                     _safe_iter(cov_eu, self.nmem), _safe_iter(cov_nu, self.nmem),
+                     _safe_iter(cov_mag, self.nmem), _safe_iter(B0e, self.nmem),
+                     _safe_iter(B0n, self.nmem), _safe_iter(B0u, self.nmem),
+                     _safe_iter(B0, self.nmem))
+        self.mems = [MEM(*value) for value in values]
         #self.mems = [MEM(lat_, lon_, r_, B_, B_u_, comp) for (lat_, lon_, r_, B_, B_u_) in zip(lat, lon, r, B, B_u)]
         self.comp = self.mems[0].comp
         
@@ -57,6 +77,11 @@ class Data(object):
         self._cov_eu = None
         self._cov_nu = None
         self._cov_mag = None
+
+        self._B0e = None
+        self._B0n = None
+        self._B0u = None
+        self._B0 = None
     
     @property
     def lat(self):
@@ -141,5 +166,27 @@ class Data(object):
         if self._cov_mag is None:
             self._cov_mag = np.concatenate([mem.cov_mag for mem in self.mems])
         return self._cov_mag
-    
-    
+
+    @property
+    def B0e(self):
+        if self._B0e is None:
+            self._B0e = np.concatenate([mem.B0e for mem in self.mems])
+        return self._B0e
+
+    @property
+    def B0n(self):
+        if self._B0n is None:
+            self._B0n = np.concatenate([mem.B0n for mem in self.mems])
+        return self._B0n
+
+    @property
+    def B0u(self):
+        if self._B0u is None:
+            self._B0u = np.concatenate([mem.B0u for mem in self.mems])
+        return self._B0u
+
+    @property
+    def B0(self):
+        if self._B0 is None:
+            self._B0 = np.concatenate([mem.B0 for mem in self.mems])
+        return self._B0

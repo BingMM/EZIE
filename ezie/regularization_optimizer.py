@@ -1,10 +1,11 @@
 #%% Import
 from typing import Optional
 import numpy as np
-from scipy.linalg import cho_solve
 from scipy.interpolate import UnivariateSpline
+from scipy.signal import find_peaks
 from kneed import KneeLocator
 from itertools import product
+from nandir import BandedWoodburySolver
 from tqdm import tqdm
 
 #%% Constants
@@ -30,6 +31,7 @@ def calc_gini_matrix(x):
     gini = 1 - 2*np.sum(gini, axis=1)    
     return gini
 
+
 #%% Model class
 
 class RegularizationOptimizer(object):
@@ -40,7 +42,7 @@ class RegularizationOptimizer(object):
                  l1_steps: Optional[int] = 10,
                  l2_lower: Optional[int] = -2, 
                  l2_upper: Optional[int] =  6, 
-                 l2_steps: Optional[int] = 10,
+                 l2_steps: Optional[int] = 11,
                  iterations: Optional[int] = 2,
                  fit_steps: Optional[int] = 50,
                  m_id: Optional[int] = None):
@@ -95,7 +97,6 @@ class RegularizationOptimizer(object):
         self._gini_map = None
         self._l2_ridge = None
         self._opt_id = None
-        self._offset = None
         self._l1_opt = None
         self._l2_opt = None
         self.ridge_exp = None
@@ -115,7 +116,7 @@ class RegularizationOptimizer(object):
         return self._m_id
 
     def automate_m_id(self):
-        xis = [np.nanmedian(self.grid.projection.geo2cube(MEM.lon, MEM.lat)[0]) for MEM in self.grid.mems]
+        xis = [np.nanmedian(self.grid.projection.geo2cube(MEM.lon, MEM.lat)[0]) for MEM in self.data.mems]
         xi = self.grid.xi[0, :]
         xi_min, xi_max = np.min(xis), np.max(xis)
         left_id, right_id = np.argmin(abs(xi-xi_min)), np.argmin(abs(xi-xi_max))
@@ -145,17 +146,9 @@ class RegularizationOptimizer(object):
     @property
     def opt_id(self):
         if self._opt_id is None:
-            #self._opt_id, self._offset = self.robust_Kneedle()
-            self._opt_id, self._offset = self.max_curvature()
+            self._opt_id = self.max_curvature()
         return self._opt_id
 
-    @property
-    def offset(self):
-        if self._offset is None:
-            #self._opt_id, self._offset = self.robust_Kneedle()
-            self._opt_id, self._offset = self.max_curvature()
-        return self._offset
-    
     @property
     def rnorm(self):
         if self._rnorm is None:
@@ -181,53 +174,55 @@ class RegularizationOptimizer(object):
             self.model.reset_regularization(l1, l2)
             self.model.reset_solution()
             res = self.model.G.dot(self.model.m) - self.model.d
-            self._rnorm[i] = np.log10(res.T.dot(self.model.Qinv).dot(res))
-            self._mnorm[i] = np.log10(self.model.m.T.dot(self.model.m) + self.model.m.T.dot(self.model.LTL).dot(self.model.m))
+            self._rnorm[i] = np.log10(self.model.weighted_residual_norm(res))
+            smoothness = self.model.LTL @ self.model.m
+            self._mnorm[i] = np.log10(
+                self.model.m.T.dot(self.model.m) +
+                self.model.m.T.dot(smoothness))
 
         self.model.reset_regularization(l1_store, l2_store)
 
     def max_curvature(self):
-        # Create the spline
-        spl = UnivariateSpline(self.rnorm, self.mnorm, k=3, s=0)
-        rnorm_fit = np.linspace(self.rnorm.min(), self.rnorm.max(), 1000)
-        mnorm_fit = spl(rnorm_fit)
-        
+        # Parameterize both L-curve coordinates by l1
+        rnorm_spline = UnivariateSpline(self.l1_fit, self.rnorm, k=3, s=0)
+        mnorm_spline = UnivariateSpline(self.l1_fit, self.mnorm, k=3, s=0)
+        l1_curve = np.linspace(self.l1_fit.min(), self.l1_fit.max(), 1000)
+
+        rnorm_fit = rnorm_spline(l1_curve)
+        mnorm_fit = mnorm_spline(l1_curve)
         self.rnorm_fit, self.mnorm_fit = rnorm_fit, mnorm_fit
-        
-        # Get first and second derivatives
-        spl_prime = spl.derivative(1)  # First derivative
-        spl_double_prime = spl.derivative(2)  # Second derivative
-        
-        # Evaluate derivatives at the fitted points
-        y_prime = spl_prime(rnorm_fit)
-        y_double_prime = spl_double_prime(rnorm_fit)
-        
-        # Calculate curvature: κ = |y''| / (1 + y'^2)^(3/2)
-        curvature = np.abs(y_double_prime) / (1 + y_prime**2)**(3/2)
-        
-        # Find convex region (where second derivative is positive)
-        convex_mask = y_double_prime > 0
-        stable_spline_mask = rnorm_fit >= self.rnorm[4]
-        covex_mask = convex_mask & stable_spline_mask
-        
-        if not np.any(convex_mask):
-            # No convex region found
-            return None, None
-        
-        # Get curvature only in convex region
-        convex_curvature = curvature[convex_mask]
-        convex_rnorm = rnorm_fit[convex_mask]
-        
-        # Find maximum curvature in convex region
-        max_curv_idx = np.argmax(convex_curvature)
-        max_curvature_value = convex_curvature[max_curv_idx]
-        max_curvature_point = convex_rnorm[max_curv_idx]
-        
-        # Get the corresponding y-value
-        #max_curvature_y = spl(max_curvature_point)
-    
-        return np.argmin(abs(self.rnorm - max_curvature_point)), 3
-        #return max_curvature_point, max_curvature_value
+
+        # Signed parametric curvature of (rnorm(l1), mnorm(l1))
+        r_prime = rnorm_spline.derivative(1)(l1_curve)
+        r_double_prime = rnorm_spline.derivative(2)(l1_curve)
+        m_prime = mnorm_spline.derivative(1)(l1_curve)
+        m_double_prime = mnorm_spline.derivative(2)(l1_curve)
+
+        numerator = r_prime*m_double_prime - m_prime*r_double_prime
+        speed_squared = r_prime**2 + m_prime**2
+        curvature = np.full(l1_curve.shape, np.nan)
+        valid = speed_squared > np.finfo(float).eps
+        curvature[valid] = numerator[valid]/speed_squared[valid]**1.5
+
+        # Positive signed curvature is the convex part of the L-curve
+        convex_curvature = np.where(curvature > 0, curvature, 0)
+        peak_ids, _ = find_peaks(convex_curvature)
+        peak_ids = peak_ids[convex_curvature[peak_ids] > 0]
+
+        if peak_ids.size == 0:
+            convex_ids = np.flatnonzero(convex_curvature > 0)
+            if convex_ids.size == 0:
+                return None
+            selected_curve_id = convex_ids[np.argmax(curvature[convex_ids])]
+        else:
+            selected_curve_id = peak_ids[-1]
+
+        self.curvature_l1 = l1_curve
+        self.curvature = curvature
+        self.curvature_peaks = peak_ids
+
+        selected_l1 = l1_curve[selected_curve_id]
+        return np.argmin(abs(self.l1_fit-selected_l1))
     
 
     def robust_Kneedle(self):
@@ -305,13 +300,15 @@ class RegularizationOptimizer(object):
         
         self.model.reset_regularization(l1, l2)
         self.model.reset_solution()
-        
-        if idx is None:                
-            R = cho_solve(self.model.c_factor, self.model.GTG, check_finite=False)
+
+        if idx is None:
+            R = self.model.Rm
         else:
-            e_idx = np.zeros(self.grid.size)
-            e_idx[idx] = 1.0
-            R = cho_solve(self.model.c_factor, e_idx, check_finite=False) @ self.model.GTG
+            solver = BandedWoodburySolver(
+                G=self.model.G,
+                covariance=self.model.Q,
+                regularization=self.model.reg_sparse)
+            R = solver.resolution_rows([idx])[0]
         
         self.model.reset_regularization(l1_store, l2_store)
         self.model.reset_solution()

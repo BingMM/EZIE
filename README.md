@@ -11,6 +11,7 @@ This code was developed to robustly estimate the equivalent ionospheric electric
 ## Dependencies
 
 - [`secsy`](https://github.com/klaundal/secsy) - for cubed sphere grid generation and SEC basis functions.
+- [`nandir`](https://github.com/BingMM/nandir) - for the regularized normal-equation solve, posterior covariance, and model resolution.
 - [`tqdm`](https://github.com/tqdm/tqdm) – for progress bars (optional; can be removed with minor edits).
 
 ## Installation
@@ -23,6 +24,31 @@ pip install -e .
 ## User guide
 
 See test script in the script subfolder
+
+### Scalar-gradient inversion
+
+Use scalar Level-2 observations with one unknown constant baseline per MEM:
+
+```python
+import ezie
+from ezie.utils import generate_ezie_data
+
+data = generate_ezie_data(file, comp='F', background='chaos')
+model = ezie.Model(fit_mode='gradient', l1=0.75, l2=2.5)
+model.add_data(data)
+
+m = model.m
+offsets = model.track_offsets
+Be, Bn, Bu = model.ev.Be, model.ev.Bn, model.ev.Bu
+```
+
+Gradient mode uses only the scalar observations. It differences each MEM
+separately and propagates the covariance as `D @ Q @ D.T`. The background
+field direction comes from IGRF or CHAOS, not the retrieved Level-2 vector
+components. Scalar loading uses the Level-2 `debiased_dbmag#` product by
+default for both absolute and gradient inversions. Pass
+`scalar_source='retrieved'` to use the non-debiased `retrieved_dbmag#` product.
+`fit_mode='absolute'` remains the default.
 
 ## References
 

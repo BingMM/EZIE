@@ -16,7 +16,11 @@ class MEM(object):
                  cov_en: Optional[np.ndarray] = None,
                  cov_eu: Optional[np.ndarray] = None,
                  cov_nu: Optional[np.ndarray] = None,
-                 cov_mag: Optional[np.ndarray] = None):
+                 cov_mag: Optional[np.ndarray] = None,
+                 B0e: Optional[np.ndarray] = None,
+                 B0n: Optional[np.ndarray] = None,
+                 B0u: Optional[np.ndarray] = None,
+                 B0: Optional[np.ndarray] = None):
         
         # Check coordinates
         if len(lat.shape) != 1:
@@ -39,7 +43,8 @@ class MEM(object):
         else:
             self.r = r
         
-        for var in [Be, Bn, Bu, B, cov_ee, cov_nn, cov_uu, cov_en, cov_eu, cov_nu, cov_mag]:
+        for var in [Be, Bn, Bu, B, cov_ee, cov_nn, cov_uu, cov_en, cov_eu, cov_nu,
+                    cov_mag, B0e, B0n, B0u, B0]:
             if var is None:
                 continue
             if len(var) != self.nd:
@@ -48,6 +53,7 @@ class MEM(object):
         self.Be, self.Bn, self.Bu, self.B = Be, Bn, Bu, B
         self.cov_ee, self.cov_nn, self.cov_uu, self.cov_mag = cov_ee, cov_nn, cov_uu, cov_mag
         self.cov_en, self.cov_eu, self.cov_nu = cov_en, cov_eu, cov_nu
+        self.B0e, self.B0n, self.B0u, self.B0 = B0e, B0n, B0u, B0
         
         self.comp = 'senu'
         if self.B is None:
@@ -58,4 +64,3 @@ class MEM(object):
             self.comp = self.comp.replace('n', '')
         if self.Bu is None:
             self.comp = self.comp.replace('u', '')
-        

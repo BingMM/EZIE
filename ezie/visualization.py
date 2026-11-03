@@ -182,13 +182,10 @@ class Plotter(object):
         cc = self.plot_pp(paxs[2], lat, lt, Bn*1e9, self.Bcmap, self.Blvls)
         cc = self.plot_pp(paxs[4], lat, lt, self.ev.Bu*1e9, self.Bcmap, self.Blvls)
         
-        lat, _, lt, Be, Bn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
-                                               self.grid.lon_mesh.flatten(), 
-                                               80, 
-                                               self.ev.Be_u, self.ev.Bn_u)
-        cc = self.plot_pp(paxs[1], lat, lt, Be*1e9, self.Bucmap, self.Bulvls)
-        cc = self.plot_pp(paxs[3], lat, lt, Bn*1e9, self.Bucmap, self.Bulvls)
-        cc = self.plot_pp(paxs[5], lat, lt, self.ev.Bu_u*1e9, self.Bucmap, self.Bulvls)
+        Bqde_u, Bqdn_u, Bu_u = self.ev.get_B_qd_u_predictions(h=80)
+        cc = self.plot_pp(paxs[1], lat, lt, Bqde_u*1e9, self.Bucmap, self.Bulvls)
+        cc = self.plot_pp(paxs[3], lat, lt, Bqdn_u*1e9, self.Bucmap, self.Bulvls)
+        cc = self.plot_pp(paxs[5], lat, lt, Bu_u*1e9, self.Bucmap, self.Bulvls)
         
         
         lat, _, lt, Je, Jn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
@@ -198,13 +195,10 @@ class Plotter(object):
         for ax in paxs[::2]:
             self.plot_quiver_pp(ax, lat, lt, Je, Jn, self.Jscale)
         
-        lat, _, lt, Je, Jn = self.ev.geo2qd(self.grid.lat_mesh.flatten(), 
-                                               self.grid.lon_mesh.flatten(), 
-                                               110, 
-                                               self.ev.Je_u, self.ev.Jn_u)
+        Jqde_u, Jqdn_u = self.ev.get_J_qd_u_predictions(h=110)
         for ax in paxs[1::2]:
-            self.plot_quiver_pp(ax, lat, lt, Je, np.zeros_like(Je), self.Jscale)
-            self.plot_quiver_pp(ax, lat, lt, np.zeros_like(Je), Jn, self.Jscale)
+            self.plot_quiver_pp(ax, lat, lt, Jqde_u, np.zeros_like(Jqde_u), self.Jscale)
+            self.plot_quiver_pp(ax, lat, lt, np.zeros_like(Jqde_u), Jqdn_u, self.Jscale)
         
         # Add a shared colorbar below all subplots
         cbar = fig.colorbar(cc, ax=axs.ravel().tolist(), orientation='horizontal',fraction=0.03, pad=0.02)
@@ -251,17 +245,28 @@ class Plotter(object):
         ncomp = len(self.data.comp)
         #fig, axs = plt.subplots(nmem, ncomp, figsize=(10*(ncomp/nmem), 10), sharex=True, sharey=True)
         fig, axs = plt.subplots(nmem, ncomp, figsize=(10, 10), sharex=True, sharey=True)
-        if ncomp == 1:
-            axs = axs.reshape(-1, 1)
+        axs = np.asarray(axs, dtype=object).reshape(nmem, ncomp)
         
         for i, mem in enumerate(self.data.mems):
-            Be, Bn, Bu, Be_u, Bn_u, Bu_u = self.ev.get_B_predictions(lat=mem.lat, lon=mem.lon, r=mem.r, ret=True)
+            Be, Bn, Bu = self.ev.get_B_predictions(lat=mem.lat, lon=mem.lon, r=mem.r, ret=True)
+            if any(component in self.data.comp for component in 'enu'):
+                Be_u, Bn_u, Bu_u = self.ev.get_B_u_predictions(
+                    lat=mem.lat, lon=mem.lon, r=mem.r, ret=True)
             x = mem.lat
             for j, (ax, c) in enumerate(zip(axs[i], self.data.comp)):
                 if c =='s':
-                    B0, Be0, Bn0, Bu0, _ = self.ev.calc_main_field(mem.lat, mem.lon, mem.r, ret=True)                    
-                    yd, ydu = mem.B, np.sqrt(mem.cov_mag)
-                    yp, ypu = np.sqrt((Be+Be0)**2 + (Bn+Bn0)**2 + (Bu+Bu0)**2) - B0, np.sqrt(Be_u**2 + Bn_u**2 + Bu_u**2)
+                    if getattr(self.model, 'fit_mode', 'absolute') == 'gradient':
+                        start = sum(previous_mem.nd for previous_mem in self.data.mems[:i])
+                        stop = start + mem.nd
+                        yd, ydu = mem.B, np.sqrt(mem.cov_mag)
+                        yp = (self.model.G_absolute[start:stop] @ self.model.m +
+                              self.model.track_offsets[i])
+                    else:
+                        B0, Be0, Bn0, Bu0, _ = self.ev.calc_main_field(
+                            mem.lat, mem.lon, mem.r, ret=True)
+                        yd, ydu = mem.B, np.sqrt(mem.cov_mag)
+                        yp = np.sqrt((Be+Be0)**2 + (Bn+Bn0)**2 + (Bu+Bu0)**2) - B0
+                    ypu = self.ev.get_B_magnitude_u_predictions(mem.lat, mem.lon, mem.r, dB=(Be, Bn, Bu))
                 if c =='e':
                     yd, ydu = mem.Be, np.sqrt(mem.cov_ee)
                     yp, ypu = Be, Be_u
@@ -303,6 +308,42 @@ class Plotter(object):
         axs[0, 0].legend()
         plt.suptitle(self.data.date, y=.95)
         
+        return fig, axs
+
+    def plot_gradient_data_model_comparison(self):
+        """Plot the scalar first differences that enter a gradient fit."""
+
+        if getattr(self.model, 'fit_mode', 'absolute') != 'gradient':
+            raise ValueError("Gradient comparison requires fit_mode='gradient'")
+        if self.data.comp != 's':
+            raise ValueError('Gradient comparison requires scalar-only data')
+
+        nmem = len(self.data.mems)
+        fig, axs = plt.subplots(nmem, 1, figsize=(10, 2.5*nmem), sharex=True)
+        axs = np.asarray(axs, dtype=object).reshape(nmem)
+        prediction = self.model.G_absolute @ self.model.m
+
+        start = 0
+        for i, (ax, mem) in enumerate(zip(axs, self.data.mems)):
+            stop = start + mem.nd
+            observed_gradient = np.diff(mem.B)
+            predicted_gradient = np.diff(prediction[start:stop])
+            gradient_std = np.sqrt(mem.cov_mag[:-1] + mem.cov_mag[1:])
+            lat = (mem.lat[:-1] + mem.lat[1:])/2
+
+            scale = 1e9
+            ax.fill_between(lat,
+                            (observed_gradient-gradient_std)*scale,
+                            (observed_gradient+gradient_std)*scale,
+                            color='tab:blue', alpha=.2)
+            ax.plot(lat, observed_gradient*scale, color='tab:blue', label='L2 difference')
+            ax.plot(lat, predicted_gradient*scale, color='tab:orange', label='Model difference')
+            ax.set_ylabel(f'MEM {i+1}\nΔF [nT]')
+            start = stop
+
+        axs[-1].set_xlabel('latitude')
+        axs[0].legend()
+        plt.suptitle(self.data.date)
         return fig, axs
 
 #%%
@@ -389,10 +430,6 @@ class Plotter(object):
                 self.regOpt.mnorm[self.regOpt.opt_id], 
                 '*', markersize=10, 
                 label=f'l1, l2 = {np.round(self.regOpt.l1_opt, 2)}, {np.round(self.regOpt.l2_opt, 2)}')
-        ax.plot(self.regOpt.rnorm[self.regOpt.offset], 
-                self.regOpt.mnorm[self.regOpt.offset], 
-                '*', markersize=10,
-                label='Concave offset')
         ax.set_xlabel('misfit norm')
         ax.set_ylabel('model norm')
         ax.legend(fontsize=12)
@@ -423,15 +460,3 @@ class Plotter(object):
         ax.legend(fontsize=12)
         ax.set_xlabel('l1')
         ax.set_ylabel('l2')
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        

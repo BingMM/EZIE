@@ -251,9 +251,10 @@ class Validation(object):
         return self._Bu_std_ev
 
     def ev_sm(self):
-        B_ = self.ev.get_B_predictions(self.lat, self.lon, 6371.2e3, ret=True)
-        self._Be_ev, self._Bn_ev, self._Bu_ev, self._Be_std_ev, self._Bn_std_ev, self._Bu_std_ev = B_
-        del B_
+        self._Be_ev, self._Bn_ev, self._Bu_ev = self.ev.get_B_predictions(
+            self.lat, self.lon, 6371.2e3, ret=True)
+        self._Be_std_ev, self._Bn_std_ev, self._Bu_std_ev = self.ev.get_B_u_predictions(
+            self.lat, self.lon, 6371.2e3, ret=True)
 
 #%% Get data for a single station
 
