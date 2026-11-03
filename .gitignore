@@ -5,3 +5,7 @@ Frank_l2_Oct_2025_new
 
 # Local Obsidian state
 vault/.obsidian/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
