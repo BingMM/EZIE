@@ -1,12 +1,41 @@
 # Handoff - Latest
 
-Last reviewed: 2026-10-29
+Last reviewed: 2026-11-17
 
 Branch: `flight-data`
 
 Pre-launch release commit: `9508bf9595b4a2ad70b0a9fc3e75d9176c8ad59f`
 
 ## Summary
+
+Current task: prepare a map directly from Level-2 observations rather than
+Level-3 predictions. `scripts/lithosphere_global_map_l2.py` now adds SML,
+`dSML_dt`, matching and quiet-selection flags from the existing local cache.
+The dataframe keeps all rows and exposes `df_quiet` separately. All files are
+selected by default (`max_files=None`); no download is performed. The cache
+was verified as 156,960 consecutive minutes covering 2025-05-15 through
+2025-08-31. Eleven real L2 files gave 2,348/2,348 matched rows and 458 quiet
+rows. Exact/nearest/tied matching and uncovered/NaT timestamps passed focused
+checks. Structural compilation passed. Startup HEAD was `23c5dac` on
+`flight-data`; the L2 script was untracked and `scripts/Bscalar_inversion.py`
+had existing user edits, which were preserved.
+
+The initial sibling-script imports failed in Spyder `%runcell`. Cache reading
+and nearest-minute matching now live in `ezie/sml.py`, with imports retained
+in their previous modules for compatibility. The L2 Import cell now uses only
+package imports. It passed from `/tmp` without `__file__`, `__package__`, or
+the scripts directory on `sys.path`, including reading the real cache and
+matching sample timestamps.
+All 15 existing global-map and SML-histogram tests passed after the move.
+
+The user's `Generate grid` and `Plot` cells are preserved. `Do statistics`
+now pools the four MEMs from `df_quiet` at their individual positions, uses
+`grid.bin_index()`, and returns `medians` in T and integer `counts`, both of
+shape `grid.shape`. Only finite in-grid observations contribute; empty cells
+hold NaN/zero. Counts refer to raw scalar observations. Synthetic checks
+covered known medians/counts, distinct MEM positions, invalid/outside samples,
+and empty inputs. An 11-file real-data run yielded 1,796 quiet scalar samples
+in 669 cells on the configured `(182, 182)` grid. Compilation passed.
 
 The first post-launch Level-2 execution has been reproduced using
 `ezie_l2_20250515_004708_sva_v003_r000.nc4`. The revised loader exposes four
@@ -152,6 +181,14 @@ plots include the fitted offsets, and a separate gradient comparison displays
 the quantities actually fitted.
 
 ## Next actionable step
+
+For the direct L2 workflow, run the statistics cell on the full `df_quiet`
+archive and use `medians` and `counts` in the map. Spatial aggregation is
+implemented, but the script does not write the configured map output.
+`dB1...4` and variances remain in T and T-squared, respectively. Avoid
+automatically refreshing the SML cache if later L2 dates are uncovered; confirm
+the download range and volume first. Earlier inversion and L3-map context
+follows for continuity.
 
 The restartable all-orbit checkpoint workflow is implemented in
 `scripts/lithosphere_l3.py`. It stores both cached linear and exact nonlinear
@@ -663,6 +700,8 @@ two-knee case to validate the new selection.
 
 ## Portfolio impact
 
+- 2026-11-17: direct-L2 SML integration changes technical continuity only;
+  no new priority, deadline, or project-card update is needed for this task.
 - Central update needed: Yes
 - Changes: representative post-launch L2 ingestion reached the inversion. The
   pre-launch automatic-regularization regression is repaired, another event

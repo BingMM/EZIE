@@ -1,6 +1,6 @@
 # Current State
 
-Last reviewed: 2026-10-29
+Last reviewed: 2026-11-17
 
 Branch reviewed: `flight-data`
 
@@ -8,6 +8,31 @@ Release commit reviewed: `9508bf9595b4a2ad70b0a9fc3e75d9176c8ad59f`
 
 ## Verified repository state
 
+- **Confirmed on 2026-11-17:** `scripts/lithosphere_global_map_l2.py` now
+  attaches cached SML (nT), `dSML_dt` (nT/min), `sml_matched`, and `quiet_sml`
+  to its direct Level-2 dataframe. It reuses
+  `/media/bing/LaCie/EZIE_lithosphere_maps/supermag_sml.nc` without network
+  access. The cache still contains 156,960 gap-free minutes from 2025-05-15
+  through 2025-08-31. Nearest-minute matching uses a 60-second tolerance;
+  unmatched or missing observation times receive NaNs and fail the quiet
+  selection. The thresholds remain `abs(SML) < 80 nT` and
+  `abs(dSML/dt) < 10 nT/min`. All rows remain in `df`, with a separate
+  `df_quiet` subset. The former 11-file cutoff is now configurable through
+  `max_files`, defaulting to all files. An 11-file check matched all 2,348
+  rows, including 458 quiet rows; tie, nearest, uncovered, and NaT cases also
+  passed. The `Do statistics` cell now pools all four MEMs at their own
+  coordinates, uses `grid.bin_index()`, and produces `medians` (T) and
+  `counts` with `grid.shape`. Nonfinite or out-of-grid samples are excluded;
+  empty cells have NaN medians and zero counts. These are raw pooled sample
+  statistics without footprint or stream weighting. Synthetic known medians,
+  counts, per-MEM positions, empty/all-invalid inputs, and missing/out-of-grid
+  samples passed. Eleven real files produced 1,796 retained quiet MEM samples
+  in 669 populated cells on the user's `(182, 182)` grid. The full archive
+  statistics have not been run; perturbations retain loader units of T.
+  Cache reading and nearest-minute matching now live in `ezie/sml.py` and
+  remain importable from the earlier map/histogram modules. The L2 Import
+  cell uses package imports, verified from `/tmp` without `__file__`,
+  `__package__`, or a sibling-script search path, fixing Spyder `%runcell`.
 - **Confirmed by the user:** this is the most modern open-source EZIE data
   codebase, designed before launch to ingest Level-2 data and produce Level-3
   equivalent-current estimates.

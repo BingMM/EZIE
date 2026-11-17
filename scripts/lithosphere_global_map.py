@@ -15,6 +15,7 @@ from scipy.ndimage import gaussian_filter
 from secsy import CSgrid, CSprojection
 from tqdm import tqdm
 
+from ezie.sml import read_sml_cache
 from ezie.supermag_api import SuperMAGGetIndices
 
 
@@ -160,22 +161,6 @@ def write_sml_cache(path, time_seconds, sml_nt):
     except Exception:
         temporary.unlink(missing_ok=True)
         raise
-
-
-def read_sml_cache(path):
-    path = Path(path)
-    if not path.is_file():
-        return None
-    with Dataset(path) as dataset:
-        if getattr(dataset, 'processing_complete', 0) != 1:
-            return None
-        required = {'time', 'SML', 'dSML_dt'}
-        if not required.issubset(dataset.variables):
-            return None
-        return (
-            np.asarray(dataset.variables['time'][:], dtype=np.int64),
-            np.asarray(dataset.variables['SML'][:], dtype=float),
-            np.asarray(dataset.variables['dSML_dt'][:], dtype=float))
 
 
 def download_sml(start_seconds, stop_seconds, userid=supermag_userid,
